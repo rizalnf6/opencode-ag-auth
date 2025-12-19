@@ -350,6 +350,7 @@ export const createAntigravityPlugin = (providerId: string) => async (
             projectId?: string;
             endpoint?: string;
             effectiveModel?: string;
+            sessionId?: string;
             toolDebugMissing?: number;
             toolDebugSummary?: string;
             toolDebugPayload?: string;
@@ -560,6 +561,7 @@ export const createAntigravityPlugin = (providerId: string) => async (
                       projectId: prepared.projectId,
                       endpoint: prepared.endpoint,
                       effectiveModel: prepared.effectiveModel,
+                      sessionId: prepared.sessionId,
                       toolDebugMissing: prepared.toolDebugMissing,
                       toolDebugSummary: prepared.toolDebugSummary,
                       toolDebugPayload: prepared.toolDebugPayload,
@@ -579,6 +581,7 @@ export const createAntigravityPlugin = (providerId: string) => async (
                       projectId: prepared.projectId,
                       endpoint: prepared.endpoint,
                       effectiveModel: prepared.effectiveModel,
+                      sessionId: prepared.sessionId,
                       toolDebugMissing: prepared.toolDebugMissing,
                       toolDebugSummary: prepared.toolDebugSummary,
                       toolDebugPayload: prepared.toolDebugPayload,
@@ -606,6 +609,7 @@ export const createAntigravityPlugin = (providerId: string) => async (
                     projectId: prepared.projectId,
                     endpoint: prepared.endpoint,
                     effectiveModel: prepared.effectiveModel,
+                    sessionId: prepared.sessionId,
                     toolDebugMissing: prepared.toolDebugMissing,
                     toolDebugSummary: prepared.toolDebugSummary,
                     toolDebugPayload: prepared.toolDebugPayload,
@@ -622,6 +626,7 @@ export const createAntigravityPlugin = (providerId: string) => async (
                   prepared.projectId,
                   prepared.endpoint,
                   prepared.effectiveModel,
+                  prepared.sessionId,
                   prepared.toolDebugMissing,
                   prepared.toolDebugSummary,
                   prepared.toolDebugPayload,
@@ -653,6 +658,7 @@ export const createAntigravityPlugin = (providerId: string) => async (
                 lastFailure.projectId,
                 lastFailure.endpoint,
                 lastFailure.effectiveModel,
+                lastFailure.sessionId,
                 lastFailure.toolDebugMissing,
                 lastFailure.toolDebugSummary,
                 lastFailure.toolDebugPayload,
