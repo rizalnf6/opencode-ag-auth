@@ -24,8 +24,10 @@ Enable Opencode to authenticate against **Antigravity** (Google's IDE) via OAuth
 Paste this into any LLM agent (Claude Code, OpenCode, Cursor, etc.):
 
 ```
-Install the opencode-antigravity-auth plugin by following: https://raw.githubusercontent.com/NoeFabris/opencode-antigravity-auth/main/README.md
+Install the opencode-antigravity-auth plugin and add the Antigravity model definitions (see "Available models") to ~/.config/opencode/opencode.json by following: https://raw.githubusercontent.com/NoeFabris/opencode-antigravity-auth/main/README.md
 ```
+
+If the agent only installs the plugin, ask it to also add models under `provider.google.models`.
 
 **Option B: Do it yourself**
 
