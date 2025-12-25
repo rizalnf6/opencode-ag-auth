@@ -738,6 +738,7 @@ export function prepareAntigravityRequest(
   toolDebugPayload?: string;
   needsSignedThinkingWarmup?: boolean;
   headerStyle: HeaderStyle;
+  thinkingRecoveryMessage?: string;
 } {
   const baseInit: RequestInit = { ...init };
   const headers = new Headers(init?.headers ?? {});
@@ -747,6 +748,7 @@ export function prepareAntigravityRequest(
   let toolDebugPayload: string | undefined;
   let sessionId: string | undefined;
   let needsSignedThinkingWarmup = false;
+  let thinkingRecoveryMessage: string | undefined;
 
   if (!isGenerativeLanguageRequest(input)) {
     return {
@@ -1290,12 +1292,8 @@ export function prepareAntigravityRequest(
           const conversationState = analyzeConversationState(requestPayload.contents);
 
           if (needsThinkingRecovery(conversationState)) {
-            // Log that we're applying recovery
-            console.warn(
-              "[Antigravity] Thinking recovery triggered: closing tool loop to start fresh turn. " +
-              `inToolLoop=${conversationState.inToolLoop}, turnHasThinking=${conversationState.turnHasThinking}, ` +
-              `turnStartIdx=${conversationState.turnStartIdx}, lastModelIdx=${conversationState.lastModelIdx}`
-            );
+            // Set message for toast notification (shown in plugin.ts, respects quiet mode)
+            thinkingRecoveryMessage = "Thinking recovery: restarting turn (corrupted context)";
 
             requestPayload.contents = closeToolLoopForThinking(requestPayload.contents);
 
@@ -1383,6 +1381,7 @@ export function prepareAntigravityRequest(
     toolDebugPayload,
     needsSignedThinkingWarmup,
     headerStyle,
+    thinkingRecoveryMessage,
   };
 }
 

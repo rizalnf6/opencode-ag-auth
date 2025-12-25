@@ -874,6 +874,11 @@ export const createAntigravityPlugin = (providerId: string) => async (
                   currentHeaderStyle,
                 );
 
+                // Show thinking recovery toast (respects quiet mode)
+                if (!quietMode && prepared.thinkingRecoveryMessage) {
+                  await showToast(prepared.thinkingRecoveryMessage, "warning");
+                }
+
                 const originalUrl = toUrlString(input);
                 const resolvedUrl = toUrlString(prepared.request);
                 pushDebug(`endpoint=${currentEndpoint}`);
