@@ -352,8 +352,7 @@ describe("regression tests", () => {
 /**
  * Proposed fix validation tests
  * 
- * These tests validate the expected behavior AFTER the fix is implemented.
- * They should FAIL with current code and PASS after the fix.
+ * These tests validate enhanced error handling behavior.
  */
 describe("proposed fix validation", () => {
   describe("loadAccounts should distinguish error types", () => {

@@ -923,9 +923,9 @@ describe("AccountManager", () => {
         "antigravity"  // Explicitly requesting antigravity
       );
 
-      // This test should FAIL with current code because it returns account 0
-      // even though account 0's antigravity quota is limited
-      expect(nextAccount?.index).toBe(1); // Should switch to account 1
+      // Verifies headerStyle-aware account selection: should skip account 0
+      // because its antigravity quota is limited, even though gemini-cli is available
+      expect(nextAccount?.index).toBe(1);
     });
 
     it("returns same account when a different headerStyle is rate-limited", () => {

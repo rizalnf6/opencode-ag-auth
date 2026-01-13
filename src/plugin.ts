@@ -1199,9 +1199,8 @@ export const createAntigravityPlugin = (providerId: string) => async (
                   const quotaKey = headerStyleToQuotaKey(headerStyle, family);
                   const { attempt, delayMs, isDuplicate } = getRateLimitBackoff(account.index, quotaKey, serverRetryMs);
 
-                  // Parse rate limit reason using smart classification
-                  const rateLimitReason = parseRateLimitReason(bodyInfo.message, bodyInfo.reason);
-                  const smartBackoffMs = calculateBackoffMs(rateLimitReason, account.consecutiveFailures ?? 0);
+                  const rateLimitReason = parseRateLimitReason(bodyInfo.reason, bodyInfo.message);
+                  const smartBackoffMs = calculateBackoffMs(rateLimitReason, account.consecutiveFailures ?? 0, serverRetryMs);
                   const effectiveDelayMs = Math.max(delayMs, smartBackoffMs);
                   const waitTimeFormatted = formatWaitTime(effectiveDelayMs);
                   
@@ -1232,8 +1231,8 @@ export const createAntigravityPlugin = (providerId: string) => async (
                   await logResponseBody(debugContext, response, 429);
 
                   if (isCapacityExhausted) {
-                    const capacityBackoffMs = calculateBackoffMs(rateLimitReason, account.consecutiveFailures ?? 0);
-                    accountManager.markRateLimitedWithReason(account, family, headerStyle, model, rateLimitReason);
+                    const capacityBackoffMs = calculateBackoffMs(rateLimitReason, account.consecutiveFailures ?? 0, serverRetryMs);
+                    accountManager.markRateLimitedWithReason(account, family, headerStyle, model, rateLimitReason, serverRetryMs);
                     
                     const backoffFormatted = formatWaitTime(capacityBackoffMs);
                     const failures = account.consecutiveFailures ?? 0;
@@ -1254,14 +1253,14 @@ export const createAntigravityPlugin = (providerId: string) => async (
                     await sleep(FIRST_RETRY_DELAY_MS, abortSignal);
                     
                     if (config.switch_on_first_rate_limit && accountCount > 1) {
-                      accountManager.markRateLimitedWithReason(account, family, headerStyle, model, rateLimitReason);
+                      accountManager.markRateLimitedWithReason(account, family, headerStyle, model, rateLimitReason, serverRetryMs);
                       shouldSwitchAccount = true;
                       break;
                     }
                     continue;
                   }
 
-                  accountManager.markRateLimitedWithReason(account, family, headerStyle, model, rateLimitReason);
+                  accountManager.markRateLimitedWithReason(account, family, headerStyle, model, rateLimitReason, serverRetryMs);
 
                   accountManager.requestSaveToDisk();
 

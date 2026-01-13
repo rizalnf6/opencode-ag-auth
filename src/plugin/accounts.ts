@@ -662,7 +662,7 @@ export class AccountManager {
     }
     this.savePending = true;
     this.saveTimeout = setTimeout(() => {
-      this.executeSave();
+      void this.executeSave();
     }, 1000);
   }
 
@@ -681,6 +681,8 @@ export class AccountManager {
     
     try {
       await this.saveToDisk();
+    } catch {
+      // best-effort persistence; avoid unhandled rejection from timer-driven saves
     } finally {
       const resolvers = this.savePromiseResolvers;
       this.savePromiseResolvers = [];
