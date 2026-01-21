@@ -244,8 +244,6 @@ export async function executeSearch(
     tools.push({ urlContext: {} });
   }
 
-  const thinkingBudget = thinking ? SEARCH_THINKING_BUDGET_DEEP : SEARCH_THINKING_BUDGET_FAST;
-
   const requestPayload = {
     systemInstruction: {
       parts: [{ text: SEARCH_SYSTEM_INSTRUCTION }],
@@ -259,7 +257,7 @@ export async function executeSearch(
     tools,
     generationConfig: {
       thinkingConfig: {
-        thinkingBudget,
+        thinkingLevel: thinking ? "high" : "low",
         includeThoughts: false,
       },
     },
@@ -284,7 +282,6 @@ export async function executeSearch(
     query,
     urlCount: urls?.length ?? 0,
     thinking,
-    thinkingBudget,
   });
 
   try {
