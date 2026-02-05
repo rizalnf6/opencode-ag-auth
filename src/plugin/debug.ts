@@ -309,7 +309,7 @@ function truncateForLog(text: string): string {
 /**
  * Writes a single debug line using the configured writer.
  */
-export function logDebug(line: string): void {
+function logDebug(line: string): void {
   getDebugState().logWriter(line);
 }
 

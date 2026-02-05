@@ -23,7 +23,6 @@ import {
   isDebugEnabled,
   logAntigravityDebugResponse,
   logCacheStats,
-  logDebug,
   type AntigravityDebugContext,
 } from "./debug";
 import { createLogger } from "./logger";
@@ -1178,23 +1177,18 @@ export function prepareAntigravityRequest(
           sanitizeCrossModelPayloadInPlace(requestPayload, { targetModel: effectiveModel });
 
           // Step 1: Strip corrupted/unsigned thinking blocks FIRST
-          // For Claude models, this strips ALL thinking blocks (unless keep_thinking is enabled)
           deepFilterThinkingBlocks(requestPayload, signatureSessionKey, getCachedSignature, true);
 
-          // Step 2: ONLY inject signed thinking from cache when keep_thinking is enabled
-          // When thinking is being stripped (default for Claude), we should NOT re-inject
-          // This was causing duplicate thinking blocks across multiple turns
-          const keepThinking = getKeepThinking();
-          if (isClaudeThinking && keepThinking && Array.isArray(requestPayload.contents)) {
+          // Step 2: THEN inject signed thinking from cache (after stripping)
+          if (isClaudeThinking && Array.isArray(requestPayload.contents)) {
             requestPayload.contents = ensureThinkingBeforeToolUseInContents(requestPayload.contents, signatureSessionKey);
           }
-          if (isClaudeThinking && keepThinking && Array.isArray(requestPayload.messages)) {
+          if (isClaudeThinking && Array.isArray(requestPayload.messages)) {
             requestPayload.messages = ensureThinkingBeforeToolUseInMessages(requestPayload.messages, signatureSessionKey);
           }
 
           // Step 3: Check if warmup needed (AFTER injection attempt)
-          // Only needed when keeping thinking, otherwise Claude generates fresh thinking each turn
-          if (isClaudeThinking && keepThinking) {
+          if (isClaudeThinking) {
             const hasToolUse =
               (Array.isArray(requestPayload.contents) && hasToolUseInContents(requestPayload.contents)) ||
               (Array.isArray(requestPayload.messages) && hasToolUseInMessages(requestPayload.messages));
@@ -1585,29 +1579,10 @@ export async function transformAntigravityResponse(
       if (errorBody?.error) {
         const debugInfo = `\n\n[Debug Info]\nRequested Model: ${requestedModel || "Unknown"}\nEffective Model: ${effectiveModel || "Unknown"}\nProject: ${projectId || "Unknown"}\nEndpoint: ${endpoint || "Unknown"}\nStatus: ${response.status}\nRequest ID: ${headers.get("x-request-id") || "N/A"}${toolDebugMissing !== undefined ? `\nTool Debug Missing: ${toolDebugMissing}` : ""}${toolDebugSummary ? `\nTool Debug Summary: ${toolDebugSummary}` : ""}${toolDebugPayload ? `\nTool Debug Payload: ${toolDebugPayload}` : ""}`;
         const injectedDebug = debugText ? `\n\n${debugText}` : "";
-
-        // Check if this is a recoverable thinking error - throw to trigger retry
-        // IMPORTANT: Must check ORIGINAL error message before enrichment to avoid false positives
-        // The debug info contains words like "thinking" (from model name) that trigger incorrect detection
-        const originalMessage = errorBody.error.message || "";
-        const errorType = detectErrorType(originalMessage);
-
-        // Now enrich the message for display/logging
         errorBody.error.message = (errorBody.error.message || "Unknown error") + debugInfo + injectedDebug;
 
-        // Debug: Log error detection details to antigravity log file
-        if (isDebugEnabled()) {
-          logDebug(`[Error detection] originalMessage: ${originalMessage.substring(0, 200)}`);
-          logDebug(`[Error detection] enrichedMessagePrefix: ${(errorBody.error.message || "").substring(0, 300)}`);
-          logDebug(`[Error detection] originalHasThinking: ${originalMessage.toLowerCase().includes("thinking")}`);
-          logDebug(`[Error detection] originalHasFirstBlock: ${originalMessage.includes("first block")}`);
-          logDebug(`[Error detection] originalHasMustStartWith: ${originalMessage.includes("must start with")}`);
-          logDebug(`[Error detection] originalHasPreceeding: ${originalMessage.includes("preceeding")}`);
-          logDebug(`[Error detection] originalHasExpected: ${originalMessage.includes("expected")}`);
-          logDebug(`[Error detection] originalHasFound: ${originalMessage.includes("found")}`);
-          logDebug(`[Error detection] detectedType: ${errorType}`);
-        }
-
+        // Check if this is a recoverable thinking error - throw to trigger retry
+        const errorType = detectErrorType(errorBody.error.message || "");
         if (errorType === "thinking_block_order") {
           const recoveryError = new Error("THINKING_RECOVERY_NEEDED");
           (recoveryError as any).recoveryType = errorType;
@@ -1675,7 +1650,7 @@ export async function transformAntigravityResponse(
     const effectiveBody = patched ?? parsed ?? undefined;
 
     const usage = usageFromSse ?? (effectiveBody ? extractUsageMetadata(effectiveBody) : null);
-
+    
     // Log cache stats when available
     if (usage && effectiveModel) {
       logCacheStats(
@@ -1685,7 +1660,7 @@ export async function transformAntigravityResponse(
         usage.promptTokenCount ?? usage.totalTokenCount ?? 0,
       );
     }
-
+    
     if (usage?.cachedContentTokenCount !== undefined) {
       headers.set("x-antigravity-cached-content-token-count", String(usage.cachedContentTokenCount));
       if (usage.totalTokenCount !== undefined) {
