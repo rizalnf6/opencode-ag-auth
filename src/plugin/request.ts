@@ -655,6 +655,13 @@ export function prepareAntigravityRequest(
 
   headers.set("Authorization", `Bearer ${accessToken}`);
   headers.delete("x-api-key");
+  // Strip x-goog-user-project for antigravity headerStyle (Daily endpoint) to prevent 403 errors.
+  // This header is added by OpenCode/AI SDK but causes auth conflicts on sandbox endpoints.
+  // Models like claude-opus-4-6-thinking are only available on Daily, so this enables them to work.
+  // Keep the header for gemini-cli style (Prod endpoint) where it may be needed for billing/quota.
+  if (headerStyle === "antigravity") {
+    headers.delete("x-goog-user-project");
+  }
 
   const match = input.match(/\/models\/([^:]+):(\w+)/);
   if (!match) {
