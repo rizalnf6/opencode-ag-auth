@@ -1,12 +1,12 @@
 /**
- * Custom error types for opencode-antigravity-auth plugin.
- * 
+ * Custom error types for opencode-ag-auth plugin.
+ *
  * Ported from LLM-API-Key-Proxy for robust error handling.
  */
 
 /**
  * Error thrown when Antigravity returns an empty response after retry attempts.
- * 
+ *
  * Empty responses can occur when:
  * - The model has no candidates/choices
  * - The response body is empty or malformed
@@ -26,7 +26,7 @@ export class EmptyResponseError extends Error {
     super(
       message ??
         `The model returned an empty response after ${attempts} attempts. ` +
-        `This may indicate a temporary service issue. Please try again.`,
+          `This may indicate a temporary service issue. Please try again.`,
     );
     this.name = "EmptyResponseError";
     this.provider = provider;

@@ -1,7 +1,7 @@
 import * as path from "node:path";
 import * as os from "node:os";
 
-export const PACKAGE_NAME = "opencode-antigravity-auth";
+export const PACKAGE_NAME = "opencode-ag-auth";
 export const NPM_REGISTRY_URL = `https://registry.npmjs.org/-/package/${PACKAGE_NAME}/dist-tags`;
 export const NPM_FETCH_TIMEOUT = 5000;
 
@@ -17,7 +17,7 @@ export const INSTALLED_PACKAGE_JSON = path.join(
   CACHE_DIR,
   "node_modules",
   PACKAGE_NAME,
-  "package.json"
+  "package.json",
 );
 
 function getUserConfigDir(): string {
@@ -28,5 +28,13 @@ function getUserConfigDir(): string {
 }
 
 export const USER_CONFIG_DIR = getUserConfigDir();
-export const USER_OPENCODE_CONFIG = path.join(USER_CONFIG_DIR, "opencode", "opencode.json");
-export const USER_OPENCODE_CONFIG_JSONC = path.join(USER_CONFIG_DIR, "opencode", "opencode.jsonc");
+export const USER_OPENCODE_CONFIG = path.join(
+  USER_CONFIG_DIR,
+  "opencode",
+  "opencode.json",
+);
+export const USER_OPENCODE_CONFIG_JSONC = path.join(
+  USER_CONFIG_DIR,
+  "opencode",
+  "opencode.jsonc",
+);

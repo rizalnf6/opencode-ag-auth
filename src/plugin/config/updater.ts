@@ -41,7 +41,7 @@ export interface UpdateConfigOptions {
 // Constants
 // =============================================================================
 
-const PLUGIN_NAME = "opencode-antigravity-auth@latest";
+const PLUGIN_NAME = "opencode-ag-auth@latest";
 const SCHEMA_URL = "https://opencode.ai/config.json";
 const OPENCODE_JSON_FILENAME = "opencode.json";
 const OPENCODE_JSONC_FILENAME = "opencode.jsonc";
@@ -50,7 +50,7 @@ function stripJsonCommentsAndTrailingCommas(json: string): string {
   return json
     .replace(
       /\\"|"(?:\\"|[^"])*"|(\/\/.*|\/\*[\s\S]*?\*\/)/g,
-      (match: string, group: string | undefined) => (group ? "" : match)
+      (match: string, group: string | undefined) => (group ? "" : match),
     )
     .replace(/,(\s*[}\]])/g, "$1");
 }
@@ -105,7 +105,7 @@ export function getOpencodeConfigPath(): string {
  * @returns UpdateConfigResult with success status and path
  */
 export async function updateOpencodeConfig(
-  options: UpdateConfigOptions = {}
+  options: UpdateConfigOptions = {},
 ): Promise<UpdateConfigResult> {
   const configPath = options.configPath ?? getOpencodeConfigPath();
 
@@ -115,7 +115,9 @@ export async function updateOpencodeConfig(
     // Read existing config or create default
     if (existsSync(configPath)) {
       const content = readFileSync(configPath, "utf-8");
-      config = JSON.parse(stripJsonCommentsAndTrailingCommas(content)) as OpencodeConfig;
+      config = JSON.parse(
+        stripJsonCommentsAndTrailingCommas(content),
+      ) as OpencodeConfig;
     } else {
       // Create default config structure
       config = {
@@ -136,9 +138,7 @@ export async function updateOpencodeConfig(
     }
 
     // Check if plugin is already in the list (any version)
-    const hasPlugin = config.plugin.some((p) =>
-      p.includes("opencode-antigravity-auth")
-    );
+    const hasPlugin = config.plugin.some((p) => p.includes("opencode-ag-auth"));
     if (!hasPlugin) {
       config.plugin.push(PLUGIN_NAME);
     }

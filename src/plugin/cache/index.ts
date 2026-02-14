@@ -1,8 +1,5 @@
 /**
- * Cache module for opencode-antigravity-auth plugin.
+ * Cache module for opencode-ag-auth plugin.
  */
 
-export {
-  SignatureCache,
-  createSignatureCache,
-} from "./signature-cache";
+export { SignatureCache, createSignatureCache } from "./signature-cache";

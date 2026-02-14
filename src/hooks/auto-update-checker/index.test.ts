@@ -17,7 +17,13 @@ vi.mock("../../plugin/debug", () => ({
 }));
 
 import { createAutoUpdateCheckerHook } from "./index";
-import { getCachedVersion, getLocalDevVersion, findPluginEntry, getLatestVersion, updatePinnedVersion } from "./checker";
+import {
+  getCachedVersion,
+  getLocalDevVersion,
+  findPluginEntry,
+  getLatestVersion,
+  updatePinnedVersion,
+} from "./checker";
 import { invalidatePackage } from "./cache";
 
 function createMockClient() {
@@ -28,10 +34,12 @@ function createMockClient() {
   };
 }
 
-function createPluginInfo(overrides: Partial<ReturnType<typeof findPluginEntry>> = {}) {
+function createPluginInfo(
+  overrides: Partial<ReturnType<typeof findPluginEntry>> = {},
+) {
   return {
     configPath: "/test/.config/opencode/opencode.json",
-    entry: "opencode-antigravity-auth@1.2.6",
+    entry: "opencode-ag-auth@1.2.6",
     pinnedVersion: "1.2.6",
     isPinned: true,
     ...overrides,
@@ -52,14 +60,18 @@ describe("Auto Update Checker", () => {
     it("skips auto-update for beta versions", async () => {
       const client = createMockClient();
       vi.mocked(getLocalDevVersion).mockReturnValue(null);
-      vi.mocked(findPluginEntry).mockReturnValue(createPluginInfo({
-        pinnedVersion: "1.2.7-beta.1",
-        entry: "opencode-antigravity-auth@1.2.7-beta.1",
-      }));
+      vi.mocked(findPluginEntry).mockReturnValue(
+        createPluginInfo({
+          pinnedVersion: "1.2.7-beta.1",
+          entry: "opencode-ag-auth@1.2.7-beta.1",
+        }),
+      );
       vi.mocked(getCachedVersion).mockReturnValue(null);
       vi.mocked(getLatestVersion).mockResolvedValue("1.2.6");
 
-      const hook = createAutoUpdateCheckerHook(client, "/test", { autoUpdate: true });
+      const hook = createAutoUpdateCheckerHook(client, "/test", {
+        autoUpdate: true,
+      });
       hook.event({ event: { type: "session.created" } });
 
       await vi.runAllTimersAsync();
@@ -73,13 +85,17 @@ describe("Auto Update Checker", () => {
     it("skips auto-update for alpha versions", async () => {
       const client = createMockClient();
       vi.mocked(getLocalDevVersion).mockReturnValue(null);
-      vi.mocked(findPluginEntry).mockReturnValue(createPluginInfo({
-        pinnedVersion: "2.0.0-alpha.3",
-        entry: "opencode-antigravity-auth@2.0.0-alpha.3",
-      }));
+      vi.mocked(findPluginEntry).mockReturnValue(
+        createPluginInfo({
+          pinnedVersion: "2.0.0-alpha.3",
+          entry: "opencode-ag-auth@2.0.0-alpha.3",
+        }),
+      );
       vi.mocked(getCachedVersion).mockReturnValue(null);
 
-      const hook = createAutoUpdateCheckerHook(client, "/test", { autoUpdate: true });
+      const hook = createAutoUpdateCheckerHook(client, "/test", {
+        autoUpdate: true,
+      });
       hook.event({ event: { type: "session.created" } });
 
       await vi.runAllTimersAsync();
@@ -90,13 +106,17 @@ describe("Auto Update Checker", () => {
     it("skips auto-update for rc versions", async () => {
       const client = createMockClient();
       vi.mocked(getLocalDevVersion).mockReturnValue(null);
-      vi.mocked(findPluginEntry).mockReturnValue(createPluginInfo({
-        pinnedVersion: "1.3.0-rc.1",
-        entry: "opencode-antigravity-auth@1.3.0-rc.1",
-      }));
+      vi.mocked(findPluginEntry).mockReturnValue(
+        createPluginInfo({
+          pinnedVersion: "1.3.0-rc.1",
+          entry: "opencode-ag-auth@1.3.0-rc.1",
+        }),
+      );
       vi.mocked(getCachedVersion).mockReturnValue(null);
 
-      const hook = createAutoUpdateCheckerHook(client, "/test", { autoUpdate: true });
+      const hook = createAutoUpdateCheckerHook(client, "/test", {
+        autoUpdate: true,
+      });
       hook.event({ event: { type: "session.created" } });
 
       await vi.runAllTimersAsync();
@@ -107,12 +127,16 @@ describe("Auto Update Checker", () => {
     it("skips auto-update when cached version is prerelease", async () => {
       const client = createMockClient();
       vi.mocked(getLocalDevVersion).mockReturnValue(null);
-      vi.mocked(findPluginEntry).mockReturnValue(createPluginInfo({
-        pinnedVersion: "1.2.6",
-      }));
+      vi.mocked(findPluginEntry).mockReturnValue(
+        createPluginInfo({
+          pinnedVersion: "1.2.6",
+        }),
+      );
       vi.mocked(getCachedVersion).mockReturnValue("1.2.7-beta.2");
 
-      const hook = createAutoUpdateCheckerHook(client, "/test", { autoUpdate: true });
+      const hook = createAutoUpdateCheckerHook(client, "/test", {
+        autoUpdate: true,
+      });
       hook.event({ event: { type: "session.created" } });
 
       await vi.runAllTimersAsync();
@@ -123,14 +147,18 @@ describe("Auto Update Checker", () => {
     it("proceeds with update check for stable versions", async () => {
       const client = createMockClient();
       vi.mocked(getLocalDevVersion).mockReturnValue(null);
-      vi.mocked(findPluginEntry).mockReturnValue(createPluginInfo({
-        pinnedVersion: "1.2.5",
-      }));
+      vi.mocked(findPluginEntry).mockReturnValue(
+        createPluginInfo({
+          pinnedVersion: "1.2.5",
+        }),
+      );
       vi.mocked(getCachedVersion).mockReturnValue(null);
       vi.mocked(getLatestVersion).mockResolvedValue("1.2.6");
       vi.mocked(updatePinnedVersion).mockReturnValue(true);
 
-      const hook = createAutoUpdateCheckerHook(client, "/test", { autoUpdate: true });
+      const hook = createAutoUpdateCheckerHook(client, "/test", {
+        autoUpdate: true,
+      });
       hook.event({ event: { type: "session.created" } });
 
       await vi.runAllTimersAsync();
@@ -143,13 +171,17 @@ describe("Auto Update Checker", () => {
     it("shows notification but does not update when autoUpdate is false", async () => {
       const client = createMockClient();
       vi.mocked(getLocalDevVersion).mockReturnValue(null);
-      vi.mocked(findPluginEntry).mockReturnValue(createPluginInfo({
-        pinnedVersion: "1.2.5",
-      }));
+      vi.mocked(findPluginEntry).mockReturnValue(
+        createPluginInfo({
+          pinnedVersion: "1.2.5",
+        }),
+      );
       vi.mocked(getCachedVersion).mockReturnValue(null);
       vi.mocked(getLatestVersion).mockResolvedValue("1.2.6");
 
-      const hook = createAutoUpdateCheckerHook(client, "/test", { autoUpdate: false });
+      const hook = createAutoUpdateCheckerHook(client, "/test", {
+        autoUpdate: false,
+      });
       hook.event({ event: { type: "session.created" } });
 
       await vi.runAllTimersAsync();
@@ -162,7 +194,7 @@ describe("Auto Update Checker", () => {
           body: expect.objectContaining({
             variant: "info",
           }),
-        })
+        }),
       );
     });
   });
@@ -176,7 +208,7 @@ describe("Auto Update Checker", () => {
       vi.mocked(getLatestVersion).mockResolvedValue("1.2.6");
 
       const hook = createAutoUpdateCheckerHook(client, "/test");
-      
+
       hook.event({ event: { type: "session.created" } });
       hook.event({ event: { type: "session.created" } });
       hook.event({ event: { type: "session.created" } });
@@ -234,7 +266,9 @@ describe("Auto Update Checker", () => {
       const client = createMockClient();
       vi.mocked(getLocalDevVersion).mockReturnValue("1.2.7-dev");
 
-      const hook = createAutoUpdateCheckerHook(client, "/test", { showStartupToast: true });
+      const hook = createAutoUpdateCheckerHook(client, "/test", {
+        showStartupToast: true,
+      });
       hook.event({ event: { type: "session.created" } });
 
       await vi.runAllTimersAsync();
@@ -244,7 +278,7 @@ describe("Auto Update Checker", () => {
           body: expect.objectContaining({
             variant: "warning",
           }),
-        })
+        }),
       );
     });
   });

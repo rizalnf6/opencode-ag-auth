@@ -3983,7 +3983,7 @@ export const createAntigravityPlugin =
                     }
 
                     console.warn(
-                      `[opencode-antigravity-auth] Skipping failed account ${accounts.length + 1}: ${result.error}`,
+                      `[opencode-ag-auth] Skipping failed account ${accounts.length + 1}: ${result.error}`,
                     );
                     break;
                   }

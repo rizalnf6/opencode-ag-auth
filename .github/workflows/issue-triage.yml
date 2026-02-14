@@ -1,27 +1,27 @@
-name: '🏷️ Issue Triage'
+name: "🏷️ Issue Triage"
 
 on:
   issues:
     types:
-      - 'opened'
-      - 'reopened'
+      - "opened"
+      - "reopened"
   issue_comment:
     types:
-      - 'created'
+      - "created"
   workflow_dispatch:
     inputs:
       issue_number:
-        description: 'Issue number to triage'
+        description: "Issue number to triage"
         required: true
-        type: 'number'
+        type: "number"
 
 concurrency:
-  group: '${{ github.workflow }}-${{ github.event.issue.number || github.event.inputs.issue_number }}'
+  group: "${{ github.workflow }}-${{ github.event.issue.number || github.event.inputs.issue_number }}"
   cancel-in-progress: true
 
 permissions:
-  contents: 'read'
-  issues: 'write'
+  contents: "read"
+  issues: "write"
 
 jobs:
   triage-issue:
@@ -41,10 +41,10 @@ jobs:
     runs-on: self-hosted
 
     steps:
-      - name: 'Check if already triaged'
-        id: 'check_labels'
+      - name: "Check if already triaged"
+        id: "check_labels"
         if: github.event_name != 'workflow_dispatch'
-        uses: 'actions/github-script@v7'
+        uses: "actions/github-script@v7"
         with:
           script: |
             const labels = context.payload.issue?.labels?.map(l => l.name) || [];
@@ -52,7 +52,7 @@ jobs:
             const areaLabels = labels.filter(l => l.startsWith('area/'));
             const hasTriageLabel = labels.some(l => triageLabels.includes(l)) || areaLabels.length > 0;
             const isRetriage = context.payload.comment?.body?.includes('/triage');
-            
+
             if (hasTriageLabel && !labels.includes('needs-triage') && !isRetriage) {
               core.info(`Issue already triaged: ${labels.join(', ')}. Skipping.`);
               core.setOutput('skip', 'true');
@@ -60,39 +60,39 @@ jobs:
               core.setOutput('skip', 'false');
             }
 
-      - name: 'Get issue data'
-        id: 'get_issue'
+      - name: "Get issue data"
+        id: "get_issue"
         if: steps.check_labels.outputs.skip != 'true'
-        uses: 'actions/github-script@v7'
+        uses: "actions/github-script@v7"
         with:
           script: |
             const issueNumber = context.payload.inputs?.issue_number || context.issue?.number;
             core.setOutput('number', issueNumber);
 
-      - name: 'Run Opencode Triage'
-        id: 'opencode_triage'
+      - name: "Run Opencode Triage"
+        id: "opencode_triage"
         if: steps.check_labels.outputs.skip != 'true'
         run: |
           echo "Running Opencode Triage on issue ${{ steps.get_issue.outputs.number }}..."
 
           # Move to the repository
-          cd /home/admin/coding/opencode-antigravity-auth
-          
+          cd /home/admin/coding/opencode-ag-auth
+
           # Run CLI with the agent config
           OUTPUT=$(opencode run --agent triage-bot "Triage issue ${{ steps.get_issue.outputs.number }}")
-          
+
           echo "Opencode Output: $OUTPUT"
-          
+
           echo "result<<EOF" >> $GITHUB_OUTPUT
           echo "$OUTPUT" >> $GITHUB_OUTPUT
           echo "EOF" >> $GITHUB_OUTPUT
 
-      - name: 'Apply Labels and Respond'
+      - name: "Apply Labels and Respond"
         if: steps.check_labels.outputs.skip != 'true'
-        uses: 'actions/github-script@v7'
+        uses: "actions/github-script@v7"
         env:
-          ISSUE_NUMBER: '${{ steps.get_issue.outputs.number }}'
-          OPENCODE_OUTPUT: '${{ steps.opencode_triage.outputs.result }}'
+          ISSUE_NUMBER: "${{ steps.get_issue.outputs.number }}"
+          OPENCODE_OUTPUT: "${{ steps.opencode_triage.outputs.result }}"
         with:
           script: |
             const rawOutput = process.env.OPENCODE_OUTPUT;
@@ -100,9 +100,9 @@ jobs:
               core.warning('No triage output available');
               return;
             }
-            
+
             core.info(`Triage output: ${rawOutput}`);
-            
+
             let parsed;
             try {
               parsed = JSON.parse(rawOutput.trim());
@@ -143,21 +143,21 @@ jobs:
                 return;
               }
             }
-            
+
             const typeLabel = parsed.type_label;
             const areaLabel = parsed.area_label;
             const duplicateOf = parsed.duplicate_of;
             const suggestedResponse = parsed.suggested_response;
-            
+
             // Validate required fields
             if (!typeLabel || !areaLabel || suggestedResponse === undefined) {
               core.setFailed(`Invalid JSON structure: missing required fields. Parsed: ${JSON.stringify(parsed)}`);
               return;
             }
-            
+
             const validTypeLabels = ['bug', 'enhancement', 'documentation', 'question', 'invalid'];
             const validAreaLabels = ['area/auth', 'area/models', 'area/config', 'area/compat'];
-            
+
             if (!validTypeLabels.includes(typeLabel)) {
               core.warning(`Invalid type_label: ${typeLabel}`);
               return;
@@ -166,14 +166,14 @@ jobs:
               core.warning(`Invalid area_label: ${areaLabel}`);
               return;
             }
-            
+
             let labelsToAdd = [];
             let labelsToRemove = ['needs-triage'];
-            
+
             // Remove existing triage labels to prevent conflicts
             validTypeLabels.forEach(label => labelsToRemove.push(label));
             validAreaLabels.forEach(label => labelsToRemove.push(label));
-            
+
             // Only add one type label and one area label
             if (typeLabel && validTypeLabels.includes(typeLabel)) {
               labelsToAdd.push(typeLabel);
@@ -184,19 +184,19 @@ jobs:
             if (duplicateOf) {
               labelsToAdd.push('duplicate');
             }
-            
+
             // Validate single label selection and deduplicate
             const typeLabels = labelsToAdd.filter(label => validTypeLabels.includes(label));
             const areaLabels = labelsToAdd.filter(label => validAreaLabels.includes(label));
             const otherLabels = labelsToAdd.filter(label => !validTypeLabels.includes(label) && !validAreaLabels.includes(label));
-            
+
             if (typeLabels.length > 1) {
               core.warning(`Multiple type labels detected: ${typeLabels.join(', ')}. Using only: ${typeLabel}`);
             }
             if (areaLabels.length > 1) {
               core.warning(`Multiple area labels detected: ${areaLabels.join(', ')}. Using only: ${areaLabel}`);
             }
-            
+
             // Rebuild labelsToAdd with single type and area labels
             labelsToAdd = [];
             if (typeLabel && validTypeLabels.includes(typeLabel)) {
@@ -206,12 +206,12 @@ jobs:
               labelsToAdd.push(areaLabel);
             }
             labelsToAdd.push(...otherLabels);
-            
+
             // Avoid removing labels that are being added
             labelsToRemove = labelsToRemove.filter(label => !labelsToAdd.includes(label));
-            
+
             const issueNumber = parseInt(process.env.ISSUE_NUMBER);
-            
+
             await github.rest.issues.addLabels({
               owner: context.repo.owner,
               repo: context.repo.repo,
@@ -219,7 +219,7 @@ jobs:
               labels: labelsToAdd
             });
             core.info(`Added labels: ${labelsToAdd.join(', ')}`);
-            
+
             for (const label of labelsToRemove) {
               try {
                 await github.rest.issues.removeLabel({
@@ -233,7 +233,7 @@ jobs:
                 core.info(`Label ${label} not present, skipping removal`);
               }
             }
-            
+
             if (suggestedResponse && suggestedResponse.trim()) {
               let body = `👋 Thanks for opening this issue!\n\n${suggestedResponse}`;
               
@@ -251,7 +251,7 @@ jobs:
               });
               core.info('Posted response comment');
             }
-            
+
             if (duplicateOf) {
               await github.rest.issues.update({
                 owner: context.repo.owner,
@@ -263,12 +263,12 @@ jobs:
               core.info(`Closed as duplicate of #${duplicateOf}`);
             }
 
-      - name: 'Comment on failure'
+      - name: "Comment on failure"
         if: failure()
-        uses: 'actions/github-script@v7'
+        uses: "actions/github-script@v7"
         env:
-          ISSUE_NUMBER: '${{ steps.get_issue.outputs.number || github.event.issue.number }}'
-          RUN_URL: '${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}'
+          ISSUE_NUMBER: "${{ steps.get_issue.outputs.number || github.event.issue.number }}"
+          RUN_URL: "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
         with:
           script: |
             if (!process.env.ISSUE_NUMBER) return;

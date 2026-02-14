@@ -8,7 +8,7 @@ import { ensureGitignoreSync } from "./storage";
 const MAX_BODY_PREVIEW_CHARS = 12000;
 const MAX_BODY_VERBOSE_CHARS = 50000;
 
-export const DEBUG_MESSAGE_PREFIX = "[opencode-antigravity-auth debug]";
+export const DEBUG_MESSAGE_PREFIX = "[opencode-ag-auth debug]";
 
 // =============================================================================
 // Debug State (lazily initialized with config)
@@ -41,7 +41,10 @@ function parseDebugLevel(flag: string): number {
 function getConfigDir(): string {
   const platform = process.platform;
   if (platform === "win32") {
-    return join(env.APPDATA || join(homedir(), "AppData", "Roaming"), "opencode");
+    return join(
+      env.APPDATA || join(homedir(), "AppData", "Roaming"),
+      "opencode",
+    );
   }
   const xdgConfig = env.XDG_CONFIG_HOME || join(homedir(), ".config");
   return join(xdgConfig, "opencode");
@@ -98,10 +101,16 @@ function createLogWriter(filePath?: string): (line: string) => void {
 export function initializeDebug(config: AntigravityConfig): void {
   // Config takes precedence, but env var can force enable for debugging
   const envDebugFlag = env.OPENCODE_ANTIGRAVITY_DEBUG ?? "";
-  const debugLevel = config.debug ? (envDebugFlag === "2" || envDebugFlag === "verbose" ? 2 : 1) : parseDebugLevel(envDebugFlag);
+  const debugLevel = config.debug
+    ? envDebugFlag === "2" || envDebugFlag === "verbose"
+      ? 2
+      : 1
+    : parseDebugLevel(envDebugFlag);
   const debugEnabled = debugLevel >= 1;
   const verboseEnabled = debugLevel >= 2;
-  const logFilePath = debugEnabled ? createLogFilePath(config.log_dir) : undefined;
+  const logFilePath = debugEnabled
+    ? createLogFilePath(config.log_dir)
+    : undefined;
   const logWriter = createLogWriter(logFilePath);
 
   if (debugEnabled) {
@@ -186,7 +195,9 @@ let requestCounter = 0;
 /**
  * Begins a debug trace for an Antigravity request.
  */
-export function startAntigravityDebugRequest(meta: AntigravityDebugRequestMeta): AntigravityDebugContext | null {
+export function startAntigravityDebugRequest(
+  meta: AntigravityDebugRequestMeta,
+): AntigravityDebugContext | null {
   const state = getDebugState();
   if (!state.debugEnabled) {
     return null;
@@ -194,15 +205,21 @@ export function startAntigravityDebugRequest(meta: AntigravityDebugRequestMeta):
 
   const id = `ANTIGRAVITY-${++requestCounter}`;
   const method = meta.method ?? "GET";
-  logDebug(`[Antigravity Debug ${id}] pid=${process.pid} ${method} ${meta.resolvedUrl}`);
+  logDebug(
+    `[Antigravity Debug ${id}] pid=${process.pid} ${method} ${meta.resolvedUrl}`,
+  );
   if (meta.originalUrl && meta.originalUrl !== meta.resolvedUrl) {
     logDebug(`[Antigravity Debug ${id}] Original URL: ${meta.originalUrl}`);
   }
   if (meta.projectId) {
     logDebug(`[Antigravity Debug ${id}] Project: ${meta.projectId}`);
   }
-  logDebug(`[Antigravity Debug ${id}] Streaming: ${meta.streaming ? "yes" : "no"}`);
-  logDebug(`[Antigravity Debug ${id}] Headers: ${JSON.stringify(maskHeaders(meta.headers))}`);
+  logDebug(
+    `[Antigravity Debug ${id}] Streaming: ${meta.streaming ? "yes" : "no"}`,
+  );
+  logDebug(
+    `[Antigravity Debug ${id}] Headers: ${JSON.stringify(maskHeaders(meta.headers))}`,
+  );
   const bodyPreview = formatBodyPreview(meta.body);
   if (bodyPreview) {
     logDebug(`[Antigravity Debug ${id}] Body Preview: ${bodyPreview}`);
@@ -239,7 +256,9 @@ export function logAntigravityDebugResponse(
   }
 
   if (meta.error) {
-    logDebug(`[Antigravity Debug ${context.id}] Error: ${formatError(meta.error)}`);
+    logDebug(
+      `[Antigravity Debug ${context.id}] Error: ${formatError(meta.error)}`,
+    );
   }
 
   if (meta.body) {
@@ -344,7 +363,10 @@ export function logAccountContext(label: string, info: AccountDebugInfo): void {
       ? `Account ${info.index + 1}`
       : "All accounts";
 
-  const indexLabel = info.index >= 0 ? `${info.index + 1}/${info.totalAccounts}` : `-/${info.totalAccounts}`;
+  const indexLabel =
+    info.index >= 0
+      ? `${info.index + 1}/${info.totalAccounts}`
+      : `-/${info.totalAccounts}`;
 
   let rateLimitInfo = "";
   if (info.rateLimitState && Object.keys(info.rateLimitState).length > 0) {
@@ -361,7 +383,9 @@ export function logAccountContext(label: string, info: AccountDebugInfo): void {
     }
   }
 
-  logDebug(`[Account] ${label}: ${accountLabel} (${indexLabel}) family=${info.family}${rateLimitInfo}`);
+  logDebug(
+    `[Account] ${label}: ${accountLabel} (${indexLabel}) family=${info.family}${rateLimitInfo}`,
+  );
 }
 
 export function logRateLimitEvent(
@@ -370,11 +394,18 @@ export function logRateLimitEvent(
   family: string,
   status: number,
   retryAfterMs: number,
-  bodyInfo: { message?: string; quotaResetTime?: string; retryDelayMs?: number | null; reason?: string },
+  bodyInfo: {
+    message?: string;
+    quotaResetTime?: string;
+    retryDelayMs?: number | null;
+    reason?: string;
+  },
 ): void {
   if (!getDebugState().debugEnabled) return;
   const accountLabel = email || `Account ${accountIndex + 1}`;
-  logDebug(`[RateLimit] ${status} on ${accountLabel} family=${family} retryAfterMs=${retryAfterMs}`);
+  logDebug(
+    `[RateLimit] ${status} on ${accountLabel} family=${family} retryAfterMs=${retryAfterMs}`,
+  );
   if (bodyInfo.message) {
     logDebug(`[RateLimit] message: ${bodyInfo.message}`);
   }
@@ -391,12 +422,18 @@ export function logRateLimitEvent(
 
 export function logRateLimitSnapshot(
   family: string,
-  accounts: Array<{ index: number; email?: string; rateLimitResetTimes?: { claude?: number; gemini?: number } }>,
+  accounts: Array<{
+    index: number;
+    email?: string;
+    rateLimitResetTimes?: { claude?: number; gemini?: number };
+  }>,
 ): void {
   if (!getDebugState().debugEnabled) return;
   const now = Date.now();
   const entries = accounts.map((account) => {
-    const label = account.email ? account.email : `Account ${account.index + 1}`;
+    const label = account.email
+      ? account.email
+      : `Account ${account.index + 1}`;
     const reset = account.rateLimitResetTimes?.[family as "claude" | "gemini"];
     if (typeof reset !== "number") {
       return `${label}=ready`;
@@ -415,29 +452,42 @@ export async function logResponseBody(
 ): Promise<string | undefined> {
   const state = getDebugState();
   if (!state.debugEnabled || !context) return undefined;
-  
+
   const isError = status >= 400;
   const shouldLogBody = state.verboseEnabled || isError;
-  
+
   if (!shouldLogBody) return undefined;
-  
+
   try {
     const text = await response.clone().text();
-    const maxChars = state.verboseEnabled ? MAX_BODY_VERBOSE_CHARS : MAX_BODY_PREVIEW_CHARS;
-    const preview = text.length <= maxChars 
-      ? text 
-      : `${text.slice(0, maxChars)}... (truncated ${text.length - maxChars} chars)`;
-    logDebug(`[Antigravity Debug ${context.id}] Response Body (${status}): ${preview}`);
+    const maxChars = state.verboseEnabled
+      ? MAX_BODY_VERBOSE_CHARS
+      : MAX_BODY_PREVIEW_CHARS;
+    const preview =
+      text.length <= maxChars
+        ? text
+        : `${text.slice(0, maxChars)}... (truncated ${text.length - maxChars} chars)`;
+    logDebug(
+      `[Antigravity Debug ${context.id}] Response Body (${status}): ${preview}`,
+    );
     return text;
   } catch (e) {
-    logDebug(`[Antigravity Debug ${context.id}] Failed to read response body: ${formatError(e)}`);
+    logDebug(
+      `[Antigravity Debug ${context.id}] Failed to read response body: ${formatError(e)}`,
+    );
     return undefined;
   }
 }
 
-export function logModelFamily(url: string, extractedModel: string | null, family: string): void {
+export function logModelFamily(
+  url: string,
+  extractedModel: string | null,
+  family: string,
+): void {
   if (!getDebugState().debugEnabled) return;
-  logDebug(`[ModelFamily] url=${url} model=${extractedModel ?? "unknown"} family=${family}`);
+  logDebug(
+    `[ModelFamily] url=${url} model=${extractedModel ?? "unknown"} family=${family}`,
+  );
 }
 
 export function debugLogToFile(message: string): void {
@@ -449,7 +499,10 @@ export function debugLogToFile(message: string): void {
  * Logs a toast message to the debug file.
  * This helps correlate what the user saw with debug events.
  */
-export function logToast(message: string, variant: "info" | "warning" | "success" | "error"): void {
+export function logToast(
+  message: string,
+  variant: "info" | "warning" | "success" | "error",
+): void {
   if (!getDebugState().debugEnabled) return;
   const variantLabel = variant.toUpperCase();
   logDebug(`[Toast/${variantLabel}] ${message}`);
@@ -468,7 +521,9 @@ export function logRetryAttempt(
   if (!getDebugState().debugEnabled) return;
   const delayInfo = delayMs !== undefined ? ` delay=${delayMs}ms` : "";
   const maxInfo = maxAttempts < 0 ? "∞" : maxAttempts.toString();
-  logDebug(`[Retry] Attempt ${attempt}/${maxInfo} reason=${reason}${delayInfo}`);
+  logDebug(
+    `[Retry] Attempt ${attempt}/${maxInfo} reason=${reason}${delayInfo}`,
+  );
 }
 
 /**
@@ -481,11 +536,15 @@ export function logCacheStats(
   totalInputTokens: number,
 ): void {
   if (!getDebugState().debugEnabled) return;
-  const cacheHitRate = totalInputTokens > 0 
-    ? Math.round((cacheReadTokens / totalInputTokens) * 100) 
-    : 0;
-  const status = cacheReadTokens > 0 ? "HIT" : (cacheWriteTokens > 0 ? "WRITE" : "MISS");
-  logDebug(`[Cache] ${status} model=${model} read=${cacheReadTokens} write=${cacheWriteTokens} total=${totalInputTokens} hitRate=${cacheHitRate}%`);
+  const cacheHitRate =
+    totalInputTokens > 0
+      ? Math.round((cacheReadTokens / totalInputTokens) * 100)
+      : 0;
+  const status =
+    cacheReadTokens > 0 ? "HIT" : cacheWriteTokens > 0 ? "WRITE" : "MISS";
+  logDebug(
+    `[Cache] ${status} model=${model} read=${cacheReadTokens} write=${cacheWriteTokens} total=${totalInputTokens} hitRate=${cacheHitRate}%`,
+  );
 }
 
 /**
@@ -500,8 +559,11 @@ export function logQuotaStatus(
   if (!getDebugState().debugEnabled) return;
   const accountLabel = accountEmail || `Account ${accountIndex + 1}`;
   const familyInfo = family ? ` family=${family}` : "";
-  const status = quotaPercent <= 0 ? "EXHAUSTED" : quotaPercent < 20 ? "LOW" : "OK";
-  logDebug(`[Quota] ${accountLabel} remaining=${quotaPercent.toFixed(1)}% status=${status}${familyInfo}`);
+  const status =
+    quotaPercent <= 0 ? "EXHAUSTED" : quotaPercent < 20 ? "LOW" : "OK";
+  logDebug(
+    `[Quota] ${accountLabel} remaining=${quotaPercent.toFixed(1)}% status=${status}${familyInfo}`,
+  );
 }
 
 /**
@@ -513,7 +575,8 @@ export function logQuotaFetch(
   details?: string,
 ): void {
   if (!getDebugState().debugEnabled) return;
-  const countInfo = accountCount !== undefined ? ` accounts=${accountCount}` : "";
+  const countInfo =
+    accountCount !== undefined ? ` accounts=${accountCount}` : "";
   const detailsInfo = details ? ` ${details}` : "";
   logDebug(`[QuotaFetch] ${event.toUpperCase()}${countInfo}${detailsInfo}`);
 }
@@ -529,7 +592,9 @@ export function logModelUsed(
   if (!getDebugState().debugEnabled) return;
   const accountInfo = accountEmail ? ` account=${accountEmail}` : "";
   if (requestedModel !== actualModel) {
-    logDebug(`[Model] requested=${requestedModel} actual=${actualModel}${accountInfo}`);
+    logDebug(
+      `[Model] requested=${requestedModel} actual=${actualModel}${accountInfo}`,
+    );
   } else {
     logDebug(`[Model] ${actualModel}${accountInfo}`);
   }

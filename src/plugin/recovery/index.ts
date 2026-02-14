@@ -1,6 +1,6 @@
 /**
- * Session recovery module for opencode-antigravity-auth.
- * 
+ * Session recovery module for opencode-ag-auth.
+ *
  * Provides recovery from:
  * - tool_result_missing: Interrupted tool executions
  * - thinking_block_order: Corrupted thinking blocks
