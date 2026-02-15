@@ -445,9 +445,9 @@ Logs are in `~/.config/opencode/antigravity-logs/`.
 The plugin includes regression tests (consume API quota):
 
 ```bash
-npx tsx script/test-regression.ts --sanity      # 7 tests, ~5 min
-npx tsx script/test-regression.ts --heavy       # 4 tests, ~30 min
-npx tsx script/test-regression.ts --dry-run     # List tests
+pnpm dlx tsx script/test-regression.ts --sanity      # 7 tests, ~5 min
+pnpm dlx tsx script/test-regression.ts --heavy       # 4 tests, ~30 min
+pnpm dlx tsx script/test-regression.ts --dry-run     # List tests
 ```
 
 ---

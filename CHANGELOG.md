@@ -1,5 +1,24 @@
 # Changelog
 
+
+## [1.5.3] - 2026-02-15
+
+### Changed
+
+- **Chore**: remove temporary test output files (62ef7a4)
+- **Chore**: final cleanup of package references and comments (641f6fe)
+- **Docs**: update repo references in documentation (4758a6d)
+- **Docs**: consistency update for branding and strict quota explanation (2dbce88)
+- **Docs**: update branding, credits, and donation info (8f43b92)
+- **Chore**: prepare release 1.5.2 (47efecd)
+
+### Fixed
+
+- **Fix**: auto-clear verification flags after successful requests (80f25f2)
+
+
+---
+
 ## [1.5.2] - 2026-02-14
 
 ### Added

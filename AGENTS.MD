@@ -9,16 +9,16 @@ OpenCode plugin for Google Antigravity OAuth. Intercepts `fetch()` calls to `gen
 ## Build & Test Commands
 
 ```bash
-npm install                          # Install dependencies
-npm run build                        # Compile (tsc -p tsconfig.build.json)
-npm run typecheck                    # Type-check only (tsc --noEmit)
-npm test                             # Run all tests (vitest run)
-npx vitest run src/plugin/auth.test.ts          # Single test file
-npx vitest run -t "test name here"              # Single test by name
-npx vitest --watch src/plugin/auth.test.ts      # Watch mode, single file
-npm run test:coverage                # Coverage report
-npm run test:e2e:models              # E2E: model availability check
-npm run test:e2e:regression          # E2E: regression suite
+pnpm install                          # Install dependencies
+pnpm run build                        # Compile (tsc -p tsconfig.build.json)
+pnpm run typecheck                    # Type-check only (tsc --noEmit)
+pnpm test                             # Run all tests (vitest run)
+pnpm vitest run src/plugin/auth.test.ts          # Single test file
+pnpm vitest run -t "test name here"              # Single test by name
+pnpm vitest --watch src/plugin/auth.test.ts      # Watch mode, single file
+pnpm run test:coverage                # Coverage report
+pnpm run test:e2e:models              # E2E: model availability check
+pnpm run test:e2e:regression          # E2E: regression suite
 ```
 
 No linter or formatter is configured. Style is enforced by convention (see below).

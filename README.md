@@ -67,9 +67,9 @@ Paste this into any LLM agent (Claude Code, OpenCode, Cursor, etc.):
 Install the opencode-ag-auth plugin and add the Antigravity model definitions to ~/.config/opencode/opencode.json by following: https://raw.githubusercontent.com/andyvandaric/opencode-ag-auth/main/README.md
 ```
 
-**Option B: Manual setup**
+**Option B: Manual setup (NPM)**
 
-1. **Add the plugin** to `~/.config/opencode/opencode.json`:
+1. **Add the plugin** to `~/.config/opencode/opencode.json` (OpenCode will auto-install from NPM):
 
    ```json
    {
@@ -119,6 +119,9 @@ opencode run "Hello" --model=google/antigravity-claude-sonnet-4-5-thinking --var
 ```
 
 </details>
+
+
+For a complete installation guide, including manual methods and advanced agent protocols, see [docs/INSTALLATION.md](docs/INSTALLATION.md).
 
 ---
 
