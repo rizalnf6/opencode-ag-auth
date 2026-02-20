@@ -10,7 +10,7 @@ import {
   type HeaderStyle,
 } from "../constants";
 import { cacheSignature, getCachedSignature } from "./cache";
-import { getKeepThinking } from "./config";
+import { getKeepThinking, isDebugTuiEnabled } from "./config";
 import {
   createStreamingTransformer,
   transformSseLine,
@@ -590,6 +590,39 @@ function generateSyntheticProjectId(): string {
 
 const STREAM_ACTION = "streamGenerateContent";
 
+function sanitizeRequestPayloadForAntigravity(payload: any): void {
+  if (!payload || typeof payload !== "object") return;
+
+  if (Array.isArray(payload.contents)) {
+    for (const content of payload.contents) {
+      if (!content || !Array.isArray(content.parts)) continue;
+
+      let currentThoughtSignature: string | undefined;
+
+      for (const part of content.parts) {
+        if (part && typeof part === "object") {
+          if (part.thought === true && part.thoughtSignature) {
+            currentThoughtSignature = part.thoughtSignature;
+            break;
+          }
+          if ((part.type === "thinking" || part.type === "reasoning") && part.signature) {
+            currentThoughtSignature = part.signature;
+            break;
+          }
+        }
+      }
+
+      if (currentThoughtSignature) {
+        for (const part of content.parts) {
+          if (part && typeof part === "object" && part.functionCall && !part.thoughtSignature) {
+            part.thoughtSignature = currentThoughtSignature;
+          }
+        }
+      }
+    }
+  }
+}
+
 /**
  * Detects requests headed to the Google Generative Language API so we can intercept them.
  */
@@ -677,7 +710,23 @@ export function prepareAntigravityRequest(
   const requestedModel = rawModel;
 
   const resolved = resolveModelForHeaderStyle(rawModel, headerStyle);
-  const effectiveModel = resolved.actualModel;
+  let effectiveModel = resolved.actualModel;
+
+  const applyGemini3ProTierToEffectiveModel = (level: string | undefined) => {
+    if (!level) {
+      return;
+    }
+    if (headerStyle !== "antigravity") {
+      return;
+    }
+    if (!/^gemini-3(?:\.\d+)?-pro/i.test(effectiveModel)) {
+      return;
+    }
+
+    const normalizedProTier = level.toLowerCase() === "high" ? "high" : "low";
+    const baseGemini3Pro = effectiveModel.replace(/-(minimal|low|medium|high)$/i, "");
+    effectiveModel = `${baseGemini3Pro}-${normalizedProTier}`;
+  };
 
   const streaming = rawAction === STREAM_ACTION;
   const defaultEndpoint = headerStyle === "gemini-cli" ? GEMINI_CLI_ENDPOINT : ANTIGRAVITY_ENDPOINT;
@@ -722,6 +771,35 @@ export function prepareAntigravityRequest(
             requestObjects.push(nested as Record<string, unknown>);
           }
         }
+
+        const variantSources: Array<Record<string, unknown>> = [
+          wrappedBody,
+          ...requestObjects,
+        ];
+
+        for (const req of variantSources) {
+          const variantConfig = extractVariantThinkingConfig(
+            (req.providerOptions as Record<string, unknown> | undefined),
+            (req.generationConfig as Record<string, unknown> | undefined),
+          );
+
+          if (variantConfig?.thinkingLevel) {
+            applyGemini3ProTierToEffectiveModel(variantConfig.thinkingLevel);
+            break;
+          }
+
+          if (typeof variantConfig?.thinkingBudget === "number") {
+            const inferredLevel = variantConfig.thinkingBudget <= 8192
+              ? "low"
+              : variantConfig.thinkingBudget <= 16384
+              ? "medium"
+              : "high";
+            applyGemini3ProTierToEffectiveModel(inferredLevel);
+            break;
+          }
+        }
+
+        wrappedBody.model = effectiveModel;
 
         const conversationKey = resolveConversationKeyFromRequests(requestObjects);
         // Strip tier suffix from model for cache key to prevent cache misses on tier change
@@ -801,6 +879,8 @@ export function prepareAntigravityRequest(
             tierThinkingLevel = undefined;
           }
         }
+
+        applyGemini3ProTierToEffectiveModel(tierThinkingLevel);
 
         if (isClaude) {
           if (!requestPayload.toolConfig) {
@@ -1205,6 +1285,8 @@ export function prepareAntigravityRequest(
             const hasCachedThinking = defaultSignatureStore.has(signatureSessionKey);
             needsSignedThinkingWarmup = hasToolUse && !hasSignedThinking && !hasCachedThinking;
           }
+        } else {
+          sanitizeRequestPayloadForAntigravity(requestPayload);
         }
 
         // For Claude models, ensure functionCall/tool use parts carry IDs (required by Anthropic).
@@ -1501,13 +1583,10 @@ export async function transformAntigravityResponse(
   const isEventStreamResponse = contentType.includes("text/event-stream");
 
   // Generate text for thinking injection:
-  // - If debug=true: inject full debug logs
-  // - If keep_thinking=true (but no debug): inject placeholder to trigger signature caching
-  // Both use the same injection path (injectDebugThinking) for consistent behavior
   const debugText =
     isDebugEnabled() && Array.isArray(debugLines) && debugLines.length > 0
       ? formatDebugLinesForThinking(debugLines)
-      : getKeepThinking()
+      : isDebugTuiEnabled() || getKeepThinking()
         ? SYNTHETIC_THINKING_PLACEHOLDER
         : undefined;
   const cacheSignatures = shouldCacheThinkingSignatures(effectiveModel);

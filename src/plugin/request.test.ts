@@ -492,13 +492,13 @@ describe("request.ts", () => {
       const transformer = createStreamingTransformer(store, defaultCallbacks);
       const encoder = new TextEncoder();
       const decoder = new TextDecoder();
-      
+
       const input = encoder.encode("data: [DONE]\n");
       const outputChunks: Uint8Array[] = [];
-      
+
       const writer = transformer.writable.getWriter();
       const reader = transformer.readable.getReader();
-      
+
       const readPromise = (async () => {
         while (true) {
           const { done, value } = await reader.read();
@@ -506,11 +506,11 @@ describe("request.ts", () => {
           if (value) outputChunks.push(value);
         }
       })();
-      
+
       await writer.write(input);
       await writer.close();
       await readPromise;
-      
+
       const output = outputChunks.map(chunk => decoder.decode(chunk)).join("");
       expect(output).toContain("[DONE]");
     });
@@ -572,7 +572,7 @@ describe("request.ts", () => {
       expect(headers.get("Authorization")).toBe("Bearer test-token");
     });
 
-it("removes x-api-key header", () => {
+    it("removes x-api-key header", () => {
       const result = prepareAntigravityRequest(
         "https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent",
         { method: "POST", body: JSON.stringify({ contents: [] }), headers: { "x-api-key": "old-key" } },
@@ -688,6 +688,56 @@ it("removes x-api-key header", () => {
       expect(result.streaming).toBe(false);
     });
 
+    it("uses high tier effective model for wrapped gemini-3.1-pro when variant is high", () => {
+      const wrappedBody = {
+        project: "my-project",
+        request: {
+          contents: [{ parts: [{ text: "Hello" }] }],
+          providerOptions: {
+            google: {
+              thinkingLevel: "high",
+            },
+          },
+        },
+      };
+
+      const result = prepareAntigravityRequest(
+        "https://generativelanguage.googleapis.com/v1beta/models/antigravity-gemini-3.1-pro:generateContent",
+        { method: "POST", body: JSON.stringify(wrappedBody) },
+        mockAccessToken,
+        mockProjectId,
+        undefined,
+        "antigravity"
+      );
+
+      expect(result.effectiveModel).toBe("gemini-3.1-pro-high");
+    });
+
+    it("uses high tier effective model when wrapped providerOptions is at top level", () => {
+      const wrappedBody = {
+        project: "my-project",
+        providerOptions: {
+          google: {
+            thinkingLevel: "high",
+          },
+        },
+        request: {
+          contents: [{ parts: [{ text: "Hello" }] }],
+        },
+      };
+
+      const result = prepareAntigravityRequest(
+        "https://generativelanguage.googleapis.com/v1beta/models/antigravity-gemini-3.1-pro:generateContent",
+        { method: "POST", body: JSON.stringify(wrappedBody) },
+        mockAccessToken,
+        mockProjectId,
+        undefined,
+        "antigravity"
+      );
+
+      expect(result.effectiveModel).toBe("gemini-3.1-pro-high");
+    });
+
     it("handles unwrapped body format", () => {
       const unwrappedBody = {
         contents: [{ parts: [{ text: "Hello" }] }]
@@ -756,16 +806,39 @@ it("removes x-api-key header", () => {
         expect(result.effectiveModel).toBe("gemini-3-flash");
       });
 
-      it("transforms gemini-3-pro-preview to gemini-3-pro-low for antigravity headerStyle", () => {
+      it("transforms gemini-3.1-pro-preview to gemini-3.1-pro for antigravity headerStyle", () => {
         const result = prepareAntigravityRequest(
-          "https://generativelanguage.googleapis.com/v1beta/models/gemini-3-pro-preview:generateContent",
+          "https://generativelanguage.googleapis.com/v1beta/models/gemini-3.1-pro-preview:generateContent",
           { method: "POST", body: JSON.stringify({ contents: [] }) },
           mockAccessToken,
           mockProjectId,
           undefined,
           "antigravity"
         );
-        expect(result.effectiveModel).toBe("gemini-3-pro-low");
+        expect(result.effectiveModel).toBe("gemini-3.1-pro-low");
+      });
+
+      it("uses gemini-3.1-pro-high when variant thinkingLevel is high", () => {
+        const result = prepareAntigravityRequest(
+          "https://generativelanguage.googleapis.com/v1beta/models/antigravity-gemini-3.1-pro:generateContent",
+          {
+            method: "POST",
+            body: JSON.stringify({
+              contents: [],
+              providerOptions: {
+                google: {
+                  thinkingLevel: "high",
+                },
+              },
+            }),
+          },
+          mockAccessToken,
+          mockProjectId,
+          undefined,
+          "antigravity"
+        );
+
+        expect(result.effectiveModel).toBe("gemini-3.1-pro-high");
       });
 
       it("transforms gemini-3-flash to gemini-3-flash-preview for gemini-cli headerStyle", () => {
@@ -780,16 +853,16 @@ it("removes x-api-key header", () => {
         expect(result.effectiveModel).toBe("gemini-3-flash-preview");
       });
 
-      it("transforms gemini-3-pro-low to gemini-3-pro-preview for gemini-cli headerStyle", () => {
+      it("transforms gemini-3.1-pro-low to gemini-3.1-pro-preview for gemini-cli headerStyle", () => {
         const result = prepareAntigravityRequest(
-          "https://generativelanguage.googleapis.com/v1beta/models/gemini-3-pro-low:generateContent",
+          "https://generativelanguage.googleapis.com/v1beta/models/gemini-3.1-pro-low:generateContent",
           { method: "POST", body: JSON.stringify({ contents: [] }) },
           mockAccessToken,
           mockProjectId,
           undefined,
           "gemini-cli"
         );
-        expect(result.effectiveModel).toBe("gemini-3-pro-preview");
+        expect(result.effectiveModel).toBe("gemini-3.1-pro-preview");
       });
 
       it("keeps non-Gemini-3 models unchanged regardless of headerStyle", () => {

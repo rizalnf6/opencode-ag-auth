@@ -28,8 +28,8 @@ describe("transform/gemini", () => {
       expect(isGeminiModel("gemini-2.5-flash")).toBe(true);
     });
 
-    it("returns true for gemini-3-pro-high", () => {
-      expect(isGeminiModel("gemini-3-pro-high")).toBe(true);
+    it("returns true for gemini-3.1-pro-high", () => {
+      expect(isGeminiModel("gemini-3.1-pro-high")).toBe(true);
     });
 
     it("returns true for uppercase GEMINI-PRO", () => {
@@ -62,12 +62,12 @@ describe("transform/gemini", () => {
   });
 
   describe("isGemini3Model", () => {
-    it("returns true for gemini-3-pro", () => {
-      expect(isGemini3Model("gemini-3-pro")).toBe(true);
+    it("returns true for gemini-3.1-pro", () => {
+      expect(isGemini3Model("gemini-3.1-pro")).toBe(true);
     });
 
-    it("returns true for gemini-3-pro-high", () => {
-      expect(isGemini3Model("gemini-3-pro-high")).toBe(true);
+    it("returns true for gemini-3.1-pro-high", () => {
+      expect(isGemini3Model("gemini-3.1-pro-high")).toBe(true);
     });
 
     it("returns true for gemini-3-flash", () => {
@@ -112,8 +112,8 @@ describe("transform/gemini", () => {
       expect(isGemini25Model("GEMINI-2.5-PRO")).toBe(true);
     });
 
-    it("returns false for gemini-3-pro", () => {
-      expect(isGemini25Model("gemini-3-pro")).toBe(false);
+    it("returns false for gemini-3.1-pro", () => {
+      expect(isGemini25Model("gemini-3.1-pro")).toBe(false);
     });
 
     it("returns false for gemini-2.0-flash", () => {
@@ -351,6 +351,11 @@ describe("transform/gemini", () => {
       };
       normalizeGeminiTools(payload);
       expect((payload.tools as unknown[])[0]).not.toHaveProperty("custom");
+      expect((payload.tools as unknown[])[0]).toHaveProperty("function");
+      const fn = ((payload.tools as unknown[])[0] as Record<string, unknown>).function as Record<string, unknown>;
+      const schema = fn.input_schema as Record<string, unknown>;
+      expect(fn.name).toBe("custom_tool");
+      expect(schema.type).toBe("OBJECT");
     });
 
     it("extracts schema from inputSchema (camelCase)", () => {
@@ -366,13 +371,41 @@ describe("transform/gemini", () => {
       normalizeGeminiTools(payload);
       expect((payload.tools as unknown[])[0]).not.toHaveProperty("custom");
     });
+
+    it("passes through existing functionDeclarations during normalization", () => {
+      const payload: RequestPayload = {
+        contents: [],
+        tools: [
+          {
+            functionDeclarations: [
+              {
+                name: "question",
+                parametersJsonSchema: {
+                  type: "object",
+                  properties: {
+                    prompt: { type: "string" },
+                  },
+                },
+              },
+            ],
+          },
+        ],
+      };
+
+      const result = normalizeGeminiTools(payload);
+
+      expect(result.toolDebugMissing).toBe(0);
+      expect(result.toolDebugSummaries[0]).toContain("hasFunctionDeclarations=true");
+      const tool = (payload.tools as Array<Record<string, unknown>>)[0]!;
+      expect(Array.isArray(tool.functionDeclarations)).toBe(true);
+    });
   });
 
   describe("applyGeminiTransforms", () => {
     it("applies Gemini 3 thinking config with thinkingLevel", () => {
       const payload: RequestPayload = { contents: [] };
       applyGeminiTransforms(payload, {
-        model: "gemini-3-pro-high",
+        model: "gemini-3.1-pro-high",
         tierThinkingLevel: "high",
         normalizedThinking: { includeThoughts: true },
       });
@@ -421,7 +454,7 @@ describe("transform/gemini", () => {
     it("does not apply thinking config when normalizedThinking is undefined", () => {
       const payload: RequestPayload = { contents: [] };
       applyGeminiTransforms(payload, {
-        model: "gemini-3-pro",
+        model: "gemini-3.1-pro",
       });
       expect(payload.generationConfig).toBeUndefined();
     });
@@ -432,7 +465,7 @@ describe("transform/gemini", () => {
         generationConfig: { temperature: 0.7, maxOutputTokens: 1000 },
       };
       applyGeminiTransforms(payload, {
-        model: "gemini-3-pro-medium",
+        model: "gemini-3.1-pro-medium",
         tierThinkingLevel: "medium",
         normalizedThinking: { includeThoughts: true },
       });
@@ -460,7 +493,7 @@ describe("transform/gemini", () => {
     it("defaults includeThoughts to true when not specified", () => {
       const payload: RequestPayload = { contents: [] };
       applyGeminiTransforms(payload, {
-        model: "gemini-3-pro-low",
+        model: "gemini-3.1-pro-low",
         tierThinkingLevel: "low",
         normalizedThinking: {},
       });
@@ -471,7 +504,7 @@ describe("transform/gemini", () => {
     it("respects includeThoughts false", () => {
       const payload: RequestPayload = { contents: [] };
       applyGeminiTransforms(payload, {
-        model: "gemini-3-pro-high",
+        model: "gemini-3.1-pro-high",
         tierThinkingLevel: "high",
         normalizedThinking: { includeThoughts: false },
       });
@@ -495,7 +528,7 @@ describe("transform/gemini", () => {
       it("injects googleSearch tool when mode is 'auto'", () => {
         const payload: RequestPayload = { contents: [], tools: [] };
         applyGeminiTransforms(payload, {
-          model: "gemini-3-pro",
+          model: "gemini-3.1-pro",
           googleSearch: { mode: "auto" },
         });
         const tools = payload.tools as unknown[];
@@ -520,7 +553,7 @@ describe("transform/gemini", () => {
       it("works without threshold specified", () => {
         const payload: RequestPayload = { contents: [] };
         applyGeminiTransforms(payload, {
-          model: "gemini-3-pro",
+          model: "gemini-3.1-pro",
           googleSearch: { mode: "auto" },
         });
         const tools = payload.tools as unknown[];
@@ -531,7 +564,7 @@ describe("transform/gemini", () => {
       it("does not inject search tool when mode is 'off'", () => {
         const payload: RequestPayload = { contents: [], tools: [] };
         applyGeminiTransforms(payload, {
-          model: "gemini-3-pro",
+          model: "gemini-3.1-pro",
           googleSearch: { mode: "off" },
         });
         const tools = payload.tools as unknown[];
@@ -541,7 +574,7 @@ describe("transform/gemini", () => {
       it("does not inject search tool when googleSearch is undefined", () => {
         const payload: RequestPayload = { contents: [], tools: [] };
         applyGeminiTransforms(payload, {
-          model: "gemini-3-pro",
+          model: "gemini-3.1-pro",
         });
         const tools = payload.tools as unknown[];
         expect(tools).toHaveLength(0);
@@ -555,7 +588,7 @@ describe("transform/gemini", () => {
           ],
         };
         applyGeminiTransforms(payload, {
-          model: "gemini-3-pro",
+          model: "gemini-3.1-pro",
           googleSearch: { mode: "auto" },
         });
         const tools = payload.tools as unknown[];
@@ -567,7 +600,7 @@ describe("transform/gemini", () => {
       it("search tool is not normalized (skipped by normalizeGeminiTools)", () => {
         const payload: RequestPayload = { contents: [] };
         applyGeminiTransforms(payload, {
-          model: "gemini-3-pro",
+          model: "gemini-3.1-pro",
           googleSearch: { mode: "auto" },
         });
         const tools = payload.tools as unknown[];
@@ -580,12 +613,12 @@ describe("transform/gemini", () => {
   });
 
   describe("isImageGenerationModel", () => {
-    it("returns true for gemini-3-pro-image", () => {
-      expect(isImageGenerationModel("gemini-3-pro-image")).toBe(true);
+    it("returns true for gemini-3.1-pro-image", () => {
+      expect(isImageGenerationModel("gemini-3.1-pro-image")).toBe(true);
     });
 
-    it("returns true for gemini-3-pro-image-preview", () => {
-      expect(isImageGenerationModel("gemini-3-pro-image-preview")).toBe(true);
+    it("returns true for gemini-3.1-pro-image-preview", () => {
+      expect(isImageGenerationModel("gemini-3.1-pro-image-preview")).toBe(true);
     });
 
     it("returns true for gemini-2.5-flash-image", () => {
@@ -600,8 +633,8 @@ describe("transform/gemini", () => {
       expect(isImageGenerationModel("GEMINI-3-PRO-IMAGE")).toBe(true);
     });
 
-    it("returns false for gemini-3-pro", () => {
-      expect(isImageGenerationModel("gemini-3-pro")).toBe(false);
+    it("returns false for gemini-3.1-pro", () => {
+      expect(isImageGenerationModel("gemini-3.1-pro")).toBe(false);
     });
 
     it("returns false for gemini-2.5-flash", () => {
@@ -1182,6 +1215,75 @@ describe("transform/gemini", () => {
       expect(decls[1]!.name).toBe("new_tool");
     });
 
+    it("uses parametersJsonSchema from existing functionDeclarations", () => {
+      const payload: RequestPayload = {
+        contents: [],
+        tools: [
+          {
+            functionDeclarations: [
+              {
+                name: "json_schema_decl",
+                description: "Uses SDK json schema field",
+                parametersJsonSchema: {
+                  type: "OBJECT",
+                  properties: {
+                    command: { type: "STRING" },
+                  },
+                },
+              },
+            ],
+          },
+        ],
+      };
+
+      wrapToolsAsFunctionDeclarations(payload);
+
+      const tools = payload.tools as Array<Record<string, unknown>>;
+      const decls = tools[0]!.functionDeclarations as Array<Record<string, unknown>>;
+      expect(decls).toHaveLength(1);
+      expect(decls[0]!.name).toBe("json_schema_decl");
+      expect(decls[0]!.parameters).toEqual({
+        type: "OBJECT",
+        properties: {
+          command: { type: "STRING" },
+        },
+      });
+    });
+
+    it("normalizes declaration schema from parametersJsonSchema", () => {
+      const payload: RequestPayload = {
+        contents: [],
+        tools: [
+          {
+            functionDeclarations: [
+              {
+                name: "question",
+                parametersJsonSchema: {
+                  type: "object",
+                  properties: {
+                    options: {
+                      type: "array",
+                      items: { type: "string" },
+                    },
+                  },
+                },
+              },
+            ],
+          },
+        ],
+      };
+
+      wrapToolsAsFunctionDeclarations(payload);
+
+      const tools = payload.tools as Array<Record<string, unknown>>;
+      const decls = tools[0]!.functionDeclarations as Array<Record<string, unknown>>;
+      const params = decls[0]!.parameters as Record<string, unknown>;
+      expect(params.type).toBe("OBJECT");
+      const props = params.properties as Record<string, Record<string, unknown>>;
+      expect(props.options!.type).toBe("ARRAY");
+      expect((props.options!.items as Record<string, unknown>).type).toBe("STRING");
+    });
+
     it("handles multiple tools correctly", () => {
       const payload: RequestPayload = {
         contents: [],
@@ -1222,6 +1324,41 @@ describe("transform/gemini", () => {
       const tools = payload.tools as Array<Record<string, unknown>>;
       const decls = tools[0]!.functionDeclarations as Array<Record<string, unknown>>;
       expect(decls[0]!.name).toBe("tool-0");
+    });
+
+    it("sanitizes invalid tool names for Gemini API", () => {
+      const payload: RequestPayload = {
+        contents: [],
+        tools: [
+          {
+            name: "1mcp:*bad name",
+            parameters: { type: "OBJECT", properties: {} },
+          },
+        ],
+      };
+
+      wrapToolsAsFunctionDeclarations(payload);
+
+      const tools = payload.tools as Array<Record<string, unknown>>;
+      const decls = tools[0]!.functionDeclarations as Array<Record<string, unknown>>;
+      expect(decls[0]!.name).toBe("tool_1mcp__bad_name");
+    });
+
+    it("deduplicates tool names after sanitization", () => {
+      const payload: RequestPayload = {
+        contents: [],
+        tools: [
+          { name: "foo bar", parameters: { type: "OBJECT", properties: {} } },
+          { name: "foo_bar", parameters: { type: "OBJECT", properties: {} } },
+        ],
+      };
+
+      wrapToolsAsFunctionDeclarations(payload);
+
+      const tools = payload.tools as Array<Record<string, unknown>>;
+      const decls = tools[0]!.functionDeclarations as Array<Record<string, unknown>>;
+      expect(decls[0]!.name).toBe("foo_bar");
+      expect(decls[1]!.name).toBe("foo_bar_1");
     });
 
     it("does nothing when tools is empty", () => {
@@ -1437,7 +1574,7 @@ describe("transform/gemini", () => {
         ],
       };
       
-      applyGeminiTransforms(payload, { model: "gemini-3-pro" });
+      applyGeminiTransforms(payload, { model: "gemini-3.1-pro" });
       
       const tools = payload.tools as Array<Record<string, unknown>>;
       expect(tools).toHaveLength(1);
@@ -1463,7 +1600,7 @@ describe("transform/gemini", () => {
       };
 
       applyGeminiTransforms(payload, {
-        model: "gemini-3-pro",
+        model: "gemini-3.1-pro",
         googleSearch: { mode: "auto" },
       });
       
