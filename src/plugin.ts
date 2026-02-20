@@ -123,6 +123,8 @@ const warmupSucceededSessionIds = new Set<string>();
 // Used to filter toasts based on toast_scope config
 let isChildSession = false;
 let childSessionParentID: string | undefined = undefined;
+// Track the current OpenCode session ID for programmatic commands (e.g. auto-compact)
+let currentOpenCodeSessionId: string | undefined = undefined;
 
 const log = createLogger("plugin");
 
@@ -1465,8 +1467,15 @@ export const createAntigravityPlugin =
       // This is used to filter toasts based on toast_scope config
       if (input.event.type === "session.created") {
         const props = input.event.properties as
-          | { info?: { parentID?: string } }
+          | { info?: { id?: string; parentID?: string } }
           | undefined;
+        // Capture the real OpenCode session ID for programmatic commands
+        if (props?.info?.id) {
+          currentOpenCodeSessionId = props.info.id;
+        } else {
+          // Reset for new sessions that don't provide an ID (unlikely but safe)
+          currentOpenCodeSessionId = undefined;
+        }
         if (props?.info?.parentID) {
           isChildSession = true;
           childSessionParentID = props.info.parentID;
@@ -2419,6 +2428,32 @@ export const createAntigravityPlugin =
                           fingerprint: account.fingerprint,
                         },
                       );
+
+                      // Proactive context overflow guard: return synthetic error before wasting a round-trip
+                      if (prepared.contextOverflowResponse) {
+                        if (!(config.toast_scope === "root_only" && isChildSession)) {
+                          await client.tui.showToast({
+                            body: {
+                              title: "Auto-Compacting Context",
+                              message: "Context too long. Auto-compacting now...",
+                              variant: "warning",
+                            },
+                          }).catch(() => {});
+                        }
+
+                        if (currentOpenCodeSessionId) {
+                          client.session.command({
+                            path: { id: currentOpenCodeSessionId },
+                            body: { command: "compact", arguments: "" },
+                            query: { directory },
+                          }).catch(() => {});
+                        }
+
+                        return createSyntheticErrorResponse(
+                          "✅ Context was too long — your context has been automatically compacted.\n\nPlease **resend your last message** to continue.",
+                          prepared.requestedModel || prepared.effectiveModel || "unknown"
+                        );
+                      }
 
                       const originalUrl = toUrlString(input);
                       const resolvedUrl = toUrlString(prepared.request);
