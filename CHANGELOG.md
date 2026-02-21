@@ -1,3 +1,11 @@
+## [1.6.3] - 2026-02-22
+
+### Fixed
+
+- **Gemini 3.1 Pro Multi-turn Tool Call Error** - Fixed a bug where Gemini thinking models (`gemini-3.1-pro-preview-customtools`) would throw a `400 INVALID_ARGUMENT` error (`Function call is missing a thought_signature`) during multi-turn tool execution.
+- **Thought Signature Recovery** - Added local cache recovery for `thoughtSignature` to prevent signature loss caused by the Vercel AI SDK stripping metadata when reconstructing conversation history.
+- **Wrapped Request Injection** - Correctly injects the recovered `thoughtSignature` into `functionCall` parts for Vercel AI SDK wrapped requests, ensuring seamless compatibility with OpenCode's execution loop.
+
 # Changelog
 
 ## [1.6.0] - 2026-02-21

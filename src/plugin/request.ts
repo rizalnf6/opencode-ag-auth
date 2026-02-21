@@ -355,7 +355,7 @@ function isGeminiThinkingPart(part: any): boolean {
 // Reference: LLM-API-Key-Proxy uses this pattern for Gemini 3 tool calls.
 const SENTINEL_SIGNATURE = "skip_thought_signature_validator";
 
-function ensureThoughtSignature(part: any, sessionId: string): any {
+export function ensureThoughtSignature(part: any, sessionId: string): any {
   if (!part || typeof part !== "object") {
     return part;
   }
@@ -591,7 +591,7 @@ function generateSyntheticProjectId(): string {
 
 const STREAM_ACTION = "streamGenerateContent";
 
-function sanitizeRequestPayloadForAntigravity(payload: any): void {
+function sanitizeRequestPayloadForAntigravity(payload: any, sessionKey?: string): void {
   if (!payload || typeof payload !== "object") return;
 
   if (Array.isArray(payload.contents)) {
@@ -600,19 +600,44 @@ function sanitizeRequestPayloadForAntigravity(payload: any): void {
 
       let currentThoughtSignature: string | undefined;
 
+      // First pass: Find existing thoughtSignature or recover it from cache via ensureThoughtSignature
       for (const part of content.parts) {
         if (part && typeof part === "object") {
-          if (part.thought === true && part.thoughtSignature) {
+          // Check standard Gemini thought parts
+          if (part.thought === true) {
             currentThoughtSignature = part.thoughtSignature;
-            break;
+            
+            // If missing in payload but we have sessionKey, try to recover from cache
+            if (!currentThoughtSignature && sessionKey) {
+              const updatedPart = ensureThoughtSignature(part, sessionKey);
+              if (updatedPart.thoughtSignature && updatedPart.thoughtSignature !== "skip_thought_signature_validator") {
+                currentThoughtSignature = updatedPart.thoughtSignature;
+                part.thoughtSignature = currentThoughtSignature; // restore it
+              }
+            }
+            
+            if (currentThoughtSignature) break;
           }
-          if ((part.type === "thinking" || part.type === "reasoning") && part.signature) {
+          
+          // Check wrapped/Anthropic style thinking parts
+          if (part.type === "thinking" || part.type === "reasoning") {
             currentThoughtSignature = part.signature;
-            break;
+            
+            // Try to recover from cache
+            if (!currentThoughtSignature && sessionKey) {
+              const updatedPart = ensureThoughtSignature(part, sessionKey);
+              if (updatedPart.thoughtSignature && updatedPart.thoughtSignature !== "skip_thought_signature_validator") {
+                currentThoughtSignature = updatedPart.thoughtSignature;
+                part.signature = currentThoughtSignature; // also restore it to the thought part itself
+              }
+            }
+            
+            if (currentThoughtSignature) break;
           }
         }
       }
 
+      // Second pass: If we found a thought signature, inject it into any functionCall parts in this turn
       if (currentThoughtSignature) {
         for (const part of content.parts) {
           if (part && typeof part === "object" && part.functionCall && !part.thoughtSignature) {
@@ -838,6 +863,11 @@ export function prepareAntigravityRequest(
 
             // Step 3: Apply tool pairing fixes (ID assignment, response matching, orphan recovery)
             applyToolPairingFixes(req as Record<string, unknown>, true);
+          } else if (effectiveModel.toLowerCase().includes("gemini-3") || effectiveModel.toLowerCase().includes("gemini-experimental")) {
+            // Fix: Preserve thoughtSignature for Gemini thinking models when wrapped by OpenCode (Vercel AI SDK compatibility)
+            // The Vercel AI SDK strips thoughtSignature when building conversation history.
+            // We need to re-inject it by copying from the thinking part to the functionCall part in the same block.
+            sanitizeRequestPayloadForAntigravity(req as Record<string, unknown>, signatureSessionKey);
           }
         }
 
@@ -1294,7 +1324,7 @@ export function prepareAntigravityRequest(
             needsSignedThinkingWarmup = hasToolUse && !hasSignedThinking && !hasCachedThinking;
           }
         } else {
-          sanitizeRequestPayloadForAntigravity(requestPayload);
+          sanitizeRequestPayloadForAntigravity(requestPayload, signatureSessionKey);
         }
 
         // For Claude models, ensure functionCall/tool use parts carry IDs (required by Anthropic).
